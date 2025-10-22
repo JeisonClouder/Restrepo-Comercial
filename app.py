@@ -1,9 +1,9 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, jsonify, send_file
 import os
+import csv
 
 app = Flask(__name__)
 
-# Carpeta donde se guardarán los archivos
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -25,14 +25,20 @@ def upload_file():
     file.save(filepath)
     return f"Archivo {file.filename} subido correctamente", 200
 
-# Endpoint para obtener archivo actual
+# Endpoint para obtener archivo en JSON
 @app.route("/archivo/<nombre>", methods=["GET"])
 def get_file(nombre):
     filepath = os.path.join(UPLOAD_FOLDER, nombre)
-    if os.path.exists(filepath):
-        return send_file(filepath)
-    return "Archivo no encontrado", 404
+    if not os.path.exists(filepath):
+        return "Archivo no encontrado", 404
 
+    data = []
+    with open(filepath, encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter=";")
+        for row in reader:
+            data.append(row)
+
+    return jsonify(data)  # Devuelve JSON limpio
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
