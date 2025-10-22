@@ -1,47 +1,38 @@
-from flask import Flask, request, jsonify
-import paramiko
+from flask import Flask, request, send_file
 import os
-from tempfile import NamedTemporaryFile
 
 app = Flask(__name__)
 
-@app.route("/procesar", methods=["POST"])
-def procesar():
-    try:
-        # Cargar la llave privada desde variable de entorno
-        key_data = os.getenv("SSH_KEY")
-        if not key_data:
-            return jsonify({"error": "No se encontró la variable SSH_KEY"}), 500
+# Carpeta donde se guardarán los archivos
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-        with NamedTemporaryFile(delete=False, mode="w") as key_file:
-            key_file.write(key_data)
-            key_path = key_file.name
+@app.route("/")
+def home():
+    return "API de facturas en Render funcionando ✅"
 
-        hostname = "192.168.0.150"  # IP del servidor
-        username = "salesforce"
-        remote_dir = "/home/shared/pendientetransmitir"
+# Endpoint para subir archivo
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    if "file" not in request.files:
+        return "No file part", 400
 
-        key = paramiko.RSAKey.from_private_key_file(key_path)
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname=hostname, username=username, pkey=key)
+    file = request.files["file"]
+    if file.filename == "":
+        return "No selected file", 400
 
-        sftp = client.open_sftp()
-        sftp.chdir(remote_dir)
-        archivos = sftp.listdir()
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
+    return f"Archivo {file.filename} subido correctamente", 200
 
-        # Ejemplo: solo imprimir los nombres
-        print("Archivos encontrados:", archivos)
+# Endpoint para obtener archivo actual
+@app.route("/archivo/<nombre>", methods=["GET"])
+def get_file(nombre):
+    filepath = os.path.join(UPLOAD_FOLDER, nombre)
+    if os.path.exists(filepath):
+        return send_file(filepath)
+    return "Archivo no encontrado", 404
 
-        # Aquí podrías procesarlos y mandarlos a Salesforce por API REST
-
-        sftp.close()
-        client.close()
-
-        return jsonify({"status": "ok", "archivos": archivos})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run(host="0.0.0.0", port=5000)

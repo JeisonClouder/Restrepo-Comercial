@@ -1,21 +1,22 @@
-# 1. Usa una imagen base oficial de Python
-FROM python:3.9-slim
+# Etapa 1: Usar una imagen oficial y ligera de Python como base
+FROM python:3.10-slim
 
-# 2. Establece un directorio de trabajo dentro del contenedor
-WORKDIR /usr/src/app
+# Etapa 2: Establecer el directorio de trabajo dentro del contenedor
+WORKDIR /app
 
-# 3. Copia el archivo de dependencias (requirements.txt)
-# y ejecuta la instalación de las bibliotecas
+# Etapa 3: Copiar el archivo de dependencias e instalarlas
+# Se hace en un paso separado para aprovechar el caché de Docker
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Copia el resto de tu código de aplicación
+# Etapa 4: Copiar todo el código de tu aplicación al contenedor
 COPY . .
 
-# 5. Especifica el puerto que expondrá la aplicación.
-# Por convención, usaremos el puerto 8080.
-EXPOSE 8080
+# Etapa 5: Exponer el puerto que tu aplicación usará
+# Render asignará un puerto dinámicamente, pero es buena práctica declararlo
+EXPOSE 5000
 
-# 6. Comando para iniciar la aplicación usando Gunicorn
-# 'app:app' significa: módulo 'app' (app.py) : objeto Flask 'app' (app = Flask(__name__))
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# Etapa 6: El comando para iniciar la aplicación usando el servidor Gunicorn
+# Le dice a Gunicorn que escuche en todas las interfaces en el puerto 5000
+# y que ejecute el objeto 'app' que se encuentra en el archivo 'app.py'
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
